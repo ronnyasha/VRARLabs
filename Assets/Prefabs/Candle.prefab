@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 1441911131691101570}
   - component: {fileID: 4198378554108187954}
   - component: {fileID: 1093231833225466325}
+  - component: {fileID: 8364917999969977732}
   m_Layer: 0
   m_Name: Candle
   m_TagString: Untagged
@@ -114,7 +115,7 @@ CapsuleCollider:
   m_Radius: 0.5000001
   m_Height: 2
   m_Direction: 1
-  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!54 &1093231833225466325
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -142,3 +143,15 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &8364917999969977732
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6999612543962820566}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45762a933ad4bd841bebac86f00d7d85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CandleHit

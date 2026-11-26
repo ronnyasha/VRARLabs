@@ -51,8 +51,10 @@
   <ItemGroup>
     <Compile Include="Assets\SnapZone.cs" />
     <Compile Include="Assets\DistortionZone.cs" />
+    <Compile Include="Assets\GazeTeleport.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\CandleHit.cs" />
+    <Compile Include="Assets\TeleportAnchor.cs" />
     <Compile Include="Assets\PlayerMove.cs" />
   </ItemGroup>
   <ItemGroup>

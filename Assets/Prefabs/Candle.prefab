@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 1664517031261183185}
   - component: {fileID: 7630161278104864816}
   - component: {fileID: 1650056132098811625}
+  - component: {fileID: 475609386461745774}
   m_Layer: 0
   m_Name: Sphere
   m_TagString: Untagged
@@ -68,7 +69,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1011476b50699384a95fec77ad951c7b, type: 2}
+  - {fileID: 2100000, guid: 543cc70463d73a24fa528e75c6bac409, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -102,9 +103,9 @@ Light:
   m_Enabled: 1
   serializedVersion: 12
   m_Type: 2
-  m_Color: {r: 1, g: 0.7019608, b: 0.2784314, a: 1}
-  m_Intensity: 1.5
-  m_Range: 4
+  m_Color: {r: 1, g: 0.6039216, b: 0.3019608, a: 1}
+  m_Intensity: 3
+  m_Range: 5
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
@@ -186,6 +187,20 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!114 &475609386461745774
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 595028551347626133}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb49928cad81184b9ea20f10b5b05fd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CandleFlicker
+  amount: 0.22
+  speed: 3
 --- !u!1 &6999612543962820566
 GameObject:
   m_ObjectHideFlags: 0
@@ -256,7 +271,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 9e148f2f10eff3d4d81ec92d5cfb5d9c, type: 2}
+  - {fileID: 2100000, guid: 602876146cdb0834ba29f4e595662756, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

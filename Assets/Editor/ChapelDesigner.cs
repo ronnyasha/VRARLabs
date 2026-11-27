@@ -1,4 +1,5 @@
 using System.IO;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -13,7 +14,7 @@ public static class ChapelDesigner
     const string MatDir = Dir + "Materials/";
     const string TexDir = Dir + "Textures/";
 
-    static Material ghostM, stone, woodWall, woodDark, plaster, cloth, hoodDark, bordeaux, brass, wax, flame, glass,
+    static Material steel, slotGlow, threadM, ghostM, stone, woodWall, woodDark, plaster, cloth, hoodDark, bordeaux, brass, wax, flame, glass,
                     discDark, frameDark, woodBlack;
 
     static Color C(string hex) { Color c; ColorUtility.TryParseHtmlString(hex, out c); return c; }
@@ -59,6 +60,7 @@ public static class ChapelDesigner
         if (tex != null) { m.SetTexture("_BaseMap", tex); m.SetTextureScale("_BaseMap", new Vector2(tx, ty)); }
         m.SetFloat("_Smoothness", smooth);
         m.SetFloat("_Metallic", metal);
+        if (!emis.HasValue) { m.DisableKeyword("_EMISSION"); m.SetColor("_EmissionColor", Color.black); }
         if (emis.HasValue) { m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", emis.Value); }
         if (isNew) AssetDatabase.CreateAsset(m, path); else EditorUtility.SetDirty(m);
         return m;
@@ -97,6 +99,9 @@ public static class ChapelDesigner
         woodDark = M("WoodDark", Color.white, woodTex, 2, 2, 0.2f);
         plaster = M("Plaster", Color.white, plasterTex, 6, 2, 0.05f);
         cloth = M("Cloth", Color.white, clothTex, 1, 1, 0.1f);
+        steel = M("Steel", C("#e6eaee"), null, 1, 1, 0.8f, 0.5f, new Color(0.35f, 0.37f, 0.40f));
+        slotGlow = M("SlotGlow", C("#050404"), null, 1, 1, 0.0f);
+        threadM = M("ThreadSeam", C("#692B34"), null, 1, 1, 0.1f, 0f, new Color(0.45f, 0.08f, 0.12f));
         ghostM = M("GhostCloth", C("#5c5852"), clothTex, 1, 1, 0.05f);
         hoodDark = M("HoodVoid", C("#050404"), null, 1, 1, 0.0f);
         bordeaux = M("Bordeaux", C("#34131a"), null, 1, 1, 0.1f);
@@ -214,6 +219,118 @@ public static class ChapelDesigner
         PrefabUtility.UnloadPrefabContents(root);
     }
 
+
+    static void AddVisual(GameObject item, string kind)
+    {
+        var old = item.transform.Find("Visual"); if (old != null) Object.DestroyImmediate(old.gameObject);
+        var mr = item.GetComponent<MeshRenderer>(); if (mr != null) mr.enabled = false;
+        var v = new GameObject("Visual").transform; v.SetParent(item.transform, false);
+        v.localPosition = new Vector3(0, -0.34f, 0);
+        if (kind == "Spool")
+        {
+            v.localPosition = Vector3.zero;
+            P(PrimitiveType.Cylinder, "Body", Vector3.zero, new Vector3(0.9f, 0.4f, 0.9f), woodDark, v, false);
+            P(PrimitiveType.Cylinder, "Thread", Vector3.zero, new Vector3(0.95f, 0.26f, 0.95f), threadM, v, false);
+        }
+        else if (kind == "Needle")
+        {
+            P(PrimitiveType.Cylinder, "Shaft", Vector3.zero, new Vector3(0.14f, 0.9f, 0.14f), steel, v, false, new Vector3(0, 0, 90));
+            P(PrimitiveType.Sphere, "Eye", new Vector3(0.88f, 0, 0), new Vector3(0.22f, 0.12f, 0.22f), steel, v, false);
+        }
+        else
+        {
+            P(PrimitiveType.Cube, "Cloth", Vector3.zero, new Vector3(1.6f, 0.12f, 1.2f), cloth, v, false, new Vector3(0, 12, 0));
+            P(PrimitiveType.Cube, "Cloth2", new Vector3(0.08f, 0.1f, 0.02f), new Vector3(1.2f, 0.1f, 0.9f), cloth, v, false, new Vector3(0, -8, 0));
+        }
+    }
+
+    static void BuildGame(Transform root, GameObject fabric, GameObject snap, Light altarSpot, Transform figs, GameObject padSrc)
+    {
+        var game = new GameObject("RitualGame").transform; game.SetParent(root, false);
+
+        // старі копії (якщо дизайн застосовують повторно)
+        var oldVis = fabric.transform.Find("Visual"); if (oldVis != null) Object.DestroyImmediate(oldVis.gameObject);
+        fabric.name = "Fabric";
+
+        var spool = Object.Instantiate(fabric); spool.name = "Spool";
+        var needle = Object.Instantiate(fabric); needle.name = "Needle";
+        spool.transform.SetParent(game, true); needle.transform.SetParent(game, true);
+
+        // тумби
+        var pos = new Dictionary<string, Vector3>
+        {
+            { "Spool", new Vector3(-1.45f, 0f, 3.4f) },
+            { "Needle", new Vector3(1.45f, 0f, 4.0f) },
+            { "Fabric", new Vector3(-1.45f, 0f, 4.6f) },
+        };
+        foreach (var kv in pos)
+        {
+            var pl = new GameObject("Plinth_" + kv.Key).transform; pl.SetParent(game, false); pl.position = kv.Value;
+            P(PrimitiveType.Cube, "Column", new Vector3(0, 0.5f, 0), new Vector3(0.4f, 1.0f, 0.4f), woodBlack, pl);
+            P(PrimitiveType.Cube, "Top", new Vector3(0, 1.015f, 0), new Vector3(0.5f, 0.03f, 0.5f), brass, pl);
+            AddLight(game, "ItemGlow_" + kv.Key, kv.Value + new Vector3(0, 1.7f, 0), LightType.Point, C("#ffd9a0"), 3.5f, 2.6f, false);
+        }
+        var items = new[] { spool, needle, fabric };
+        foreach (var it in items)
+        {
+            AddVisual(it, it.name);
+            it.transform.position = pos[it.name] + new Vector3(0, 1.075f, 0);
+            it.transform.rotation = Quaternion.identity;
+            if (it.GetComponent<RitualItem>() == null) it.AddComponent<RitualItem>();
+        }
+
+        // слоти на вівтарі (Snap Zone)
+        var slotPos = new Dictionary<string, Vector3>
+        {
+            { "Spool", new Vector3(0.55f, 1.30f, 7.0f) },
+            { "Needle", new Vector3(-0.55f, 1.30f, 7.0f) },
+            { "Fabric", new Vector3(0.0f, 1.30f, 7.0f) },
+        };
+        var slots = new List<SnapZone>();
+        foreach (var kv in slotPos)
+        {
+            GameObject z;
+            if (kv.Key == "Fabric") z = snap;
+            else { z = Object.Instantiate(snap); z.name = kv.Key + "Slot"; z.transform.SetParent(game, true); }
+            z.transform.position = kv.Value;
+            z.transform.rotation = Quaternion.Euler(0, kv.Key == "Needle" ? 20f : 0f, 0);
+            var bc = z.GetComponent<BoxCollider>(); if (bc != null) bc.size = new Vector3(0.4f, 0.4f, 0.4f);
+            var sn = z.GetComponent<SnapZone>(); sn.requiredName = kv.Key;
+            slots.Add(sn);
+            P(PrimitiveType.Cylinder, "SlotMarker_" + kv.Key, new Vector3(kv.Value.x, 1.285f, kv.Value.z), new Vector3(0.24f, 0.003f, 0.24f), slotGlow, game, false);
+        }
+
+        // додаткові точки телепортації: до котушки й на платформу вівтаря
+        if (padSrc != null)
+        {
+            var padSpool = Object.Instantiate(padSrc); padSpool.name = "TeleportPadSpool";
+            padSpool.transform.SetParent(game, true); padSpool.transform.position = new Vector3(-0.9f, 0.02f, 3.5f);
+            var padAltar = Object.Instantiate(padSrc); padAltar.name = "TeleportPadAltar";
+            padAltar.transform.SetParent(game, true); padAltar.transform.position = new Vector3(0f, 0.42f, 6.2f);
+        }
+
+        // нитка, яка з'являється, коли сорочку зшито
+        var seam = new GameObject("ThreadSeam").transform; seam.SetParent(game, false);
+        P(PrimitiveType.Cube, "SeamSleeve", new Vector3(-0.58f, 1.285f, 7.30f), new Vector3(0.78f, 0.006f, 0.014f), threadM, seam, false, new Vector3(0, 14, 0));
+        P(PrimitiveType.Cube, "SeamPlacket", new Vector3(0.0f, 1.292f, 7.28f), new Vector3(0.012f, 0.006f, 0.74f), threadM, seam, false);
+        P(PrimitiveType.Cube, "SeamHem", new Vector3(0.0f, 1.285f, 7.68f), new Vector3(0.56f, 0.006f, 0.012f), threadM, seam, false);
+
+        // напис над вівтарем
+        var lab = new GameObject("RitualLabel"); lab.transform.SetParent(game, false);
+        lab.transform.position = new Vector3(0, 3.0f, 8.55f);
+        var tm = lab.AddComponent<TextMesh>();
+        tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        lab.GetComponent<MeshRenderer>().sharedMaterial = tm.font.material;
+        tm.fontSize = 80; tm.characterSize = 0.05f; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
+        tm.color = C("#d9d2c5"); tm.text = "COLLECT  SPOOL  -  NEEDLE  -  FABRIC\n0 / 3";
+
+        var rg = game.gameObject.AddComponent<RitualGame>();
+        rg.slots = slots.ToArray(); rg.label = tm; rg.seam = seam.gameObject; rg.altarLight = altarSpot;
+        var ft = new List<FigureTurn>();
+        foreach (Transform f in figs) { var t = f.gameObject.GetComponent<FigureTurn>(); if (t == null) t = f.gameObject.AddComponent<FigureTurn>(); ft.Add(t); }
+        rg.figures = ft.ToArray();
+    }
+
     [MenuItem("Tools/Apply Chapel Design")]
     public static void Build()
     {
@@ -312,8 +429,8 @@ public static class ChapelDesigner
         // ----- вівтар -----
         var altar = new GameObject("Altar").transform; altar.SetParent(root, false);
         P(PrimitiveType.Cube, "Platform", new Vector3(0, 0.2f, 7.2f), new Vector3(4.6f, 0.4f, 2.7f), stone, altar);
-        P(PrimitiveType.Cube, "Table", new Vector3(0, 0.975f, 7.35f), new Vector3(2.4f, 1.15f, 0.9f), woodBlack, altar);
-        float ty = 1.56f;
+        P(PrimitiveType.Cube, "Table", new Vector3(0, 0.825f, 7.35f), new Vector3(2.4f, 0.85f, 0.9f), woodBlack, altar);
+        float ty = 1.26f;
         P(PrimitiveType.Cube, "ShirtBody", new Vector3(0, ty, 7.30f), new Vector3(0.58f, 0.03f, 0.78f), cloth, altar, false);
         P(PrimitiveType.Cube, "SleeveL", new Vector3(-0.58f, ty + 0.005f, 7.40f), new Vector3(0.78f, 0.03f, 0.20f), cloth, altar, false, new Vector3(0, 14, 0));
         P(PrimitiveType.Cube, "SleeveR", new Vector3(0.58f, ty + 0.005f, 7.42f), new Vector3(0.78f, 0.03f, 0.20f), cloth, altar, false, new Vector3(0, -22, 0));
@@ -321,19 +438,19 @@ public static class ChapelDesigner
         P(PrimitiveType.Cube, "Placket", new Vector3(0, ty + 0.018f, 7.28f), new Vector3(0.03f, 0.036f, 0.70f), plaster, altar, false);
         for (int i = 0; i < 4; i++)
             P(PrimitiveType.Sphere, "Button", new Vector3(0, ty + 0.035f, 7.05f + i * 0.17f), new Vector3(0.028f, 0.012f, 0.028f), brass, altar, false);
-        P(PrimitiveType.Cylinder, "Spool", new Vector3(0.95f, ty + 0.05f, 7.25f), new Vector3(0.09f, 0.05f, 0.09f), woodDark, altar, false);
-        P(PrimitiveType.Cylinder, "Thread", new Vector3(0.95f, ty + 0.05f, 7.25f), new Vector3(0.095f, 0.035f, 0.095f), hoodDark, altar, false);
+        if (!vr) P(PrimitiveType.Cylinder, "Spool", new Vector3(0.95f, ty + 0.05f, 7.25f), new Vector3(0.09f, 0.05f, 0.09f), woodDark, altar, false);
+        if (!vr) P(PrimitiveType.Cylinder, "Thread", new Vector3(0.95f, ty + 0.05f, 7.25f), new Vector3(0.095f, 0.035f, 0.095f), hoodDark, altar, false);
         P(PrimitiveType.Cube, "ScissorA", new Vector3(-0.95f, ty + 0.01f, 7.2f), new Vector3(0.025f, 0.01f, 0.24f), brass, altar, false, new Vector3(0, 12, 0));
         P(PrimitiveType.Cube, "ScissorB", new Vector3(-0.95f, ty + 0.012f, 7.2f), new Vector3(0.025f, 0.01f, 0.24f), brass, altar, false, new Vector3(0, -12, 0));
         P(PrimitiveType.Cube, "Sketch", new Vector3(0.72f, ty - 0.005f, 7.58f), new Vector3(0.32f, 0.006f, 0.22f), wax, altar, false, new Vector3(0, 18, 0));
-        Candle(altar, new Vector3(-1.05f, 1.55f, 7.10f), 0.30f, true, 5f);
-        Candle(altar, new Vector3(-0.88f, 1.55f, 7.48f), 0.18f, false);
-        Candle(altar, new Vector3(-1.12f, 1.55f, 7.55f), 0.24f, false);
-        Candle(altar, new Vector3(1.10f, 1.55f, 7.05f), 0.26f, true, 5f);
-        Candle(altar, new Vector3(0.90f, 1.55f, 7.55f), 0.34f, false);
+        Candle(altar, new Vector3(-1.05f, 1.25f, 7.10f), 0.30f, true, 5f);
+        Candle(altar, new Vector3(-0.88f, 1.25f, 7.48f), 0.18f, false);
+        Candle(altar, new Vector3(-1.12f, 1.25f, 7.55f), 0.24f, false);
+        Candle(altar, new Vector3(1.10f, 1.25f, 7.05f), 0.26f, true, 5f);
+        Candle(altar, new Vector3(0.90f, 1.25f, 7.55f), 0.34f, false);
         var spot = AddLight(root, "AltarSpot", new Vector3(0, 6.0f, 5.9f), LightType.Spot, C("#ffe6c4"), 120f, 12f, false);
         spot.spotAngle = 34f;
-        spot.transform.LookAt(new Vector3(0, 1.55f, 7.3f));
+        spot.transform.LookAt(new Vector3(0, 1.25f, 7.3f));
 
         // ----- лави -----
         var pews = new GameObject("Pews").transform; pews.SetParent(root, false);
@@ -437,10 +554,10 @@ public static class ChapelDesigner
             rig.transform.rotation = Quaternion.identity;
             var p1 = FindRoot(scene, "TeleportPad1"); if (p1 != null) p1.transform.position = new Vector3(1.0f, 0.02f, 4.8f);
             var p2 = FindRoot(scene, "TeleportPad2"); if (p2 != null) p2.transform.position = new Vector3(-1.0f, 0.02f, 4.8f);
-            var cube = FindRoot(scene, "[BuildingBlock] Cube");
-            if (cube != null) cube.transform.position = new Vector3(-0.2f, 1.9f, 6.95f);
+            var cube = FindRoot(scene, "Fabric");
+            if (cube == null) cube = FindRoot(scene, "[BuildingBlock] Cube");
             var sz = FindRoot(scene, "SnapZone");
-            if (sz != null) sz.transform.position = new Vector3(0.45f, 1.66f, 6.95f);
+            if (cube != null && sz != null) BuildGame(root, cube, sz, spot, figs, FindRoot(scene, "TeleportPad1"));
             var hot = FindRoot(scene, "Teleport Hotspot");
             if (hot != null) hot.transform.position = new Vector3(0, 0, 0.8f);
         }

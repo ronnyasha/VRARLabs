@@ -1,14 +1,10 @@
 using UnityEngine;
 
-// Телепорт: дивишся на TeleportAnchor на підлозі і
-// або тримаєш погляд ~1.5 с, або тиснеш кнопку A контролера (OVRInput.Button.One)
-// - Camera Rig переноситься на цю точку.
 public class GazeTeleport : MonoBehaviour
 {
-    public OVRCameraRig rig;          // сюди перетягнути OVRCameraRig
-    public float dwellTime = 1.5f;    // скільки секунд дивитися
+    public OVRCameraRig rig;
+    public float dwellTime = 1.5f;
     public float maxDistance = 15f;
-
     TeleportAnchor aimed;
     float timer;
 
@@ -16,7 +12,6 @@ public class GazeTeleport : MonoBehaviour
     {
         if (rig == null) return;
         Transform eye = rig.centerEyeAnchor;
-
         TeleportAnchor hitAnchor = null;
         RaycastHit hit;
         if (Physics.Raycast(eye.position, eye.forward, out hit, maxDistance,
@@ -30,11 +25,11 @@ public class GazeTeleport : MonoBehaviour
             timer = 0f;
             if (aimed != null) aimed.SetAimed(true);
         }
-
         if (aimed == null) return;
 
         timer += Time.deltaTime;
-        bool press = OVRInput.GetDown(OVRInput.Button.One) || Input.GetKeyDown(KeyCode.T);
+        bool press = OVRInput.GetDown(OVRInput.Button.One)
+                  || Input.GetKeyDown(KeyCode.T);
         if (timer >= dwellTime || press)
         {
             Teleport(aimed.transform.position);
@@ -46,10 +41,10 @@ public class GazeTeleport : MonoBehaviour
 
     void Teleport(Vector3 target)
     {
-        // переносимо так, щоб голова опинилась над точкою (висоту не змінюємо)
         Vector3 offset = rig.centerEyeAnchor.position - rig.transform.position;
-        Vector3 pos = new Vector3(target.x - offset.x, rig.transform.position.y, target.z - offset.z);
-        rig.transform.position = pos;
+        // висота камери береться з точки телепортації (щоб можна було піднятися на платформу вівтаря)
+        rig.transform.position = new Vector3(target.x - offset.x,
+            target.y - 0.02f, target.z - offset.z);
         Debug.Log("Телепорт у точку " + target);
     }
 }
